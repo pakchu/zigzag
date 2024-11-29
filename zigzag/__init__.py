@@ -13,22 +13,21 @@ class ZigZag:
         low: Union[pd.Series, None] = None,
         close: Union[pd.Series, None] = None,
         candles: Union[pd.DataFrame, None] = None,
-        min_dev: float = 5,
+        min_dev_percent: float = 5,
         depth: int = 10,
     ) -> pd.DataFrame:
-        """_summary_
+        """Trading View's ZigZag indicator implementation.
 
         Args:
-            high (Union[pd.Series, None], optional): _description_. Defaults to None.
-            low (Union[pd.Series, None], optional): _description_. Defaults to None.
-            close (Union[pd.Series, None], optional): _description_. Defaults to None.
+            high (Union[pd.Series, None], optional): high series from OHLC. Defaults to None.
+            low (Union[pd.Series, None], optional): low series from OHLC. Defaults to None.
+            close (Union[pd.Series, None], optional): close series from OHLC. Defaults to None.
             candles (Union[pd.DataFrame, None], optional): A pandas DataFrame with columns ['high', 'low', 'close']. Defaults to None.
             min_dev float: The minimum price change to define a peak or a valley. Defaults to 5.
-            max_dev (float, optional): The maximum price change to define a peak or a valley. Defaults to 15.
-            depth int: The depth of the zigzag. Defaults to 14.
+            depth int: The depth of the zigzag. Defaults to 10.
 
         Returns:
-            pd.DataFrame: A pandas DataFrame with columns ['high', 'low', 'close', 'zigzag'].
+            pd.DataFrame: A pandas DataFrame with columns ['pivot', 'pivot_confirmed_at'].
         """
 
         if candles is not None:
@@ -47,20 +46,11 @@ class ZigZag:
             df.high = df.max(axis=1)
             df.low = df.min(axis=1)
 
-        # min_dev /= 100
-
-        df["avg_vol"] = ta.atr(
-            high=df["high"], low=df["low"], close=df["close"], length=20, append=True
-        )
-
         df.dropna(inplace=True)
 
-        raw_dev = df["avg_vol"] / df["close"] * 5 * 100
-        # math.max(this.settings.minDev, math.min(raw_dev, this.settings.maxDev))
-        clamped_vol = raw_dev.clip(min_dev, np.inf)
-        df["dev_threshold"] = clamped_vol
+        df["dev_threshold"] = min_dev_percent
+        df["edge_confirm_correction"] = min_dev_percent
 
-        # int depth = math.max(1, math.floor(DEPTH / 2))
         depth = max(1, depth // 2)
         try:
             df["cumulative_volume"] = df["volume"].rolling(window=depth).sum()
@@ -73,7 +63,7 @@ class ZigZag:
         df["valley_candidate"] = False
         df["pivot"] = 0.0
         df["pivot_confirmed_at"] = None
-        df['min_dev'] = min_dev
+        df['min_dev'] = min_dev_percent
         df["high"].rolling(window=depth * 2 + 1).apply(self._generate_pivot, args=(df, depth))
 
         res = df[["pivot", "pivot_confirmed_at"]]
@@ -81,7 +71,7 @@ class ZigZag:
         # if pivot is > 0.5, replace to 1, if < -0.5, replace to -1, else 0
         res["pivot"] = res["pivot"].apply(lambda x: 1 if x > 0.5 else -1 if x < -0.5 else 0)
 
-        return res, df
+        return res
 
 
     def get_atr_zigzag(
@@ -90,8 +80,8 @@ class ZigZag:
             low: Union[pd.Series, None] = None,
             close: Union[pd.Series, None] = None,
             candles: Union[pd.DataFrame, None] = None,
-            atr_len: Union[int, None] = None,
-            vol_amp:Union[float, None] = None,
+            atr_len: int = 14,
+            vol_amp: float = 3,
             min_dev:float = 5,
             max_dev:float = 15,
             depth:int = 10,
@@ -101,20 +91,20 @@ class ZigZag:
         """_summary_
 
         Args:
-            high (Union[pd.Series, None], optional): _description_. Defaults to None.
-            low (Union[pd.Series, None], optional): _description_. Defaults to None.
-            close (Union[pd.Series, None], optional): _description_. Defaults to None.
+            high (Union[pd.Series, None], optional): high series from OHLC. Defaults to None.
+            low (Union[pd.Series, None], optional): low series from OHLC. Defaults to None.
+            close (Union[pd.Series, None], optional): close series from OHLC. Defaults to None.
             candles (Union[pd.DataFrame, None], optional): A pandas DataFrame with columns ['high', 'low', 'close']. Defaults to None.
-            atr_len (Union[int, None], optional): _description_. Defaults to None.
-            vol_amp (Union[float, None], optional): _description_. Defaults to None.
+            atr_len int: ATR length. Defaults to 14.
+            vol_amp float: Volatility amplification factor. Defaults to 3.
             min_dev float: The minimum price change to define a peak or a valley. Defaults to 5.
-            max_dev (float, optional): The maximum price change to define a peak or a valley. Defaults to 15.
+            max_dev float: The maximum price change to define a peak or a valley. Defaults to 15.
             depth int: The depth of the zigzag. Defaults to 14.
             min_abs_correction_size (float, optional): _description_. Defaults to 0.
             rel_edge_correction (float, optional): _description_. Defaults to 0.
 
         Returns:
-            pd.DataFrame: A pandas DataFrame with columns ['high', 'low', 'close', 'zigzag'].
+            pd.DataFrame: A pandas DataFrame with columns ['pivot', 'pivot_confirmed_at'].
         """
 
 
@@ -134,16 +124,6 @@ class ZigZag:
             df.high = df.max(axis=1)
             df.low = df.min(axis=1)
 
-        # min_dev /= 100
-        # max_dev /= 100
-
-        # ATR_LEN = 20
-        # VOL_AMP = 5
-        # MIN_DEV = 2  # 2%
-        # MAX_DEV = 5  # 5%
-        # DEPTH = 1
-        # MIN_CORRECTION_SIZE = 0.01  # 1%
-        # PIVOT_CONFIRM_CORR_PRCT = 0.5  # 50%
 
         df["avg_vol"] = ta.atr(
             high=df["high"], low=df["low"], close=df["close"], length=atr_len, append=True
@@ -152,11 +132,9 @@ class ZigZag:
         df.dropna(inplace=True)
 
         raw_dev = df["avg_vol"] / df["close"] * vol_amp * 100
-        # math.max(this.settings.minDev, math.min(raw_dev, this.settings.maxDev))
         clamped_vol = raw_dev.clip(min_dev, max_dev)
         df["dev_threshold"] = clamped_vol
 
-        # int depth = math.max(1, math.floor(DEPTH / 2))
         depth = max(1, depth // 2)
         try:
             df["cumulative_volume"] = df["volume"].rolling(window=depth).sum()
@@ -174,8 +152,7 @@ class ZigZag:
         df["pivot"] = 0.0
         df["pivot_confirmed_at"] = None
 
-
-        df["high"].rolling(window=depth * 2 + 1).apply(self._generate_pivot, args=(df, depth), kwargs={"edge_confirm_correction": True})
+        df["high"].rolling(window=depth * 2 + 1).apply(self._generate_pivot, args=(df, depth))
 
         res = df[["pivot", "pivot_confirmed_at"]]
 
@@ -184,11 +161,7 @@ class ZigZag:
 
         return res
 
-    def _generate_pivot(self, high_window: pd.Series, df: pd.DataFrame, depth: int, edge_confirm_correction: bool = False):
-        if edge_confirm_correction:
-            criteria = 'edge_confirm_correction'
-        else:
-            criteria = 'min_dev'
+    def _generate_pivot(self, high_window: pd.Series, df: pd.DataFrame, depth: int):
         low_window = df["low"].loc[high_window.index]
         current_index = high_window.index[-1]
         # print(f'current_index: {current_index}')
@@ -307,9 +280,10 @@ class ZigZag:
             if df["last_pivot_direction"].loc[current_index] == 1:
                 for i in df.loc[last_pivot:current_index].index[1:]:
                     # print(f"i: {i}")
-                    confirm_criteria = df[criteria].loc[i]
+                    confirm_criteria = df['edge_confirm_correction'].loc[i]
                     correction = (
-                        df["last_pivot_price"].loc[current_index] / df["low"].loc[i] - 1
+                        # changed formula from the original idea
+                        (df["last_pivot_price"].loc[current_index] - df["low"].loc[i]) / df["last_pivot_price"].loc[current_index]
                     ) * 100
                     # print(f"peak correction: {correction}, edge_confirm_correction: {edge_confirm_correction}")
                     if correction >= confirm_criteria:
@@ -320,10 +294,9 @@ class ZigZag:
             else:
                 for i in df.loc[last_pivot:current_index].index[1:]:
                     # print(f"i: {i}")
-                    confirm_criteria = df[criteria].loc[i]
+                    confirm_criteria = df['edge_confirm_correction'].loc[i]
                     correction = (
-                        df.loc[i, "high"] / df.loc[current_index, "last_pivot_price"]
-                        - 1
+                        (df.loc[i, "high"] - df.loc[current_index, "last_pivot_price"])/ df.loc[current_index, "last_pivot_price"]
                     ) * 100
                     # print(f"valley correction: {correction}, edge_confirm_correction: {edge_confirm_correction}")
                     if correction >= confirm_criteria:

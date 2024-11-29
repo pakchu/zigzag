@@ -2,3 +2,6 @@
 **/__pycache__/
 .python-version
 *test*
+build/
+dist/
+*.egg-info/
