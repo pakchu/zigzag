@@ -3,6 +3,8 @@ import numpy as np
 import pandas_ta as ta
 from typing import Union
 
+import zigzag
+
 class ZigZag:
     def __init__(self, allow_zigzag_on_one_bar: bool = True):
         self.ALLOW_ZIGZAG_ON_ONE_BAR = allow_zigzag_on_one_bar
@@ -48,28 +50,30 @@ class ZigZag:
 
         df.dropna(inplace=True)
 
-        df["dev_threshold"] = min_dev_percent
-        df["edge_confirm_correction"] = min_dev_percent
+        high = df["high"].to_numpy()
+        low = df["low"].to_numpy()
 
-        depth = max(1, depth // 2)
-        try:
-            df["cumulative_volume"] = df["volume"].rolling(window=depth).sum()
-            df["cumulative_volume"] = df["cumulative_volume"].fillna(0)
-        except KeyError as e:
-            print("volume column not found, skipping volume calculation")
-            df["cumulative_volume"] = 0
+        pivot, confirmed_idx = zigzag.peak_valley_pivots(
+            high,
+            low,
+            min_dev_percent / 100,
+            depth,
+            allowed_zigzag_on_one_bar=self.ALLOW_ZIGZAG_ON_ONE_BAR,
+        )
+        pivot: np.ndarray = pivot
+        confirmed_idx: np.ndarray = confirmed_idx
 
-        df["peak_candidate"] = False
-        df["valley_candidate"] = False
-        df["pivot"] = 0.0
+        # df["pivot"] should be -1, 0, 1
+        # df["pivot_confirmed_at"] should be the timestamp of the confirmed pivot, else None
+
+        df["pivot"] = pivot
         df["pivot_confirmed_at"] = None
-        df['min_dev'] = min_dev_percent
-        df["high"].rolling(window=depth * 2 + 1).apply(self._generate_pivot, args=(df, depth))
+        df.loc[
+            confirmed_idx != 0, "pivot_confirmed_at"
+        ] = df.index[confirmed_idx[confirmed_idx != 0]]
+        # if pivot is 0, change pivot_confirmed_at to None
 
         res = df[["pivot", "pivot_confirmed_at"]]
-
-        # if pivot is > 0.5, replace to 1, if < -0.5, replace to -1, else 0
-        res["pivot"] = res["pivot"].apply(lambda x: 1 if x > 0.5 else -1 if x < -0.5 else 0)
 
         return res
 
@@ -124,40 +128,44 @@ class ZigZag:
             df.high = df.max(axis=1)
             df.low = df.min(axis=1)
 
-
         df["avg_vol"] = ta.atr(
             high=df["high"], low=df["low"], close=df["close"], length=atr_len, append=True
         )
 
         df.dropna(inplace=True)
 
-        raw_dev = df["avg_vol"] / df["close"] * vol_amp * 100
-        clamped_vol = raw_dev.clip(min_dev, max_dev)
-        df["dev_threshold"] = clamped_vol
+        high = df["high"].to_numpy()
+        low = df["low"].to_numpy()
+        close = df["close"].to_numpy()
+        atr = df["avg_vol"].to_numpy()
 
-        depth = max(1, depth // 2)
-        try:
-            df["cumulative_volume"] = df["volume"].rolling(window=depth).sum()
-            df["cumulative_volume"] = df["cumulative_volume"].fillna(0)
-        except KeyError as e:
-            print("volume column not found, skipping volume calculation")
-            df["cumulative_volume"] = 0
-        df["edge_confirm_correction"] = df["dev_threshold"] * rel_edge_correction
-        df["edge_confirm_correction"] = (
-            df["edge_confirm_correction"].clip(min_abs_correction_size * 100, None)
+        pivot, confirmed_idx = zigzag.atr_peak_valley_pivots(
+            high,
+            low,
+            close,
+            atr,
+            vol_amp,
+            min_dev,
+            max_dev,
+            rel_edge_correction,
+            min_abs_correction_size,
+            depth,
+            allowed_zigzag_on_one_bar=self.ALLOW_ZIGZAG_ON_ONE_BAR,
         )
+        pivot: np.ndarray = pivot
+        confirmed_idx: np.ndarray = confirmed_idx
 
-        df["peak_candidate"] = False
-        df["valley_candidate"] = False
-        df["pivot"] = 0.0
+        # df["pivot"] should be -1, 0, 1
+        # df["pivot_confirmed_at"] should be the timestamp of the confirmed pivot, else None
+
+        df["pivot"] = pivot
         df["pivot_confirmed_at"] = None
-
-        df["high"].rolling(window=depth * 2 + 1).apply(self._generate_pivot, args=(df, depth))
+        df.loc[
+            confirmed_idx != 0, "pivot_confirmed_at"
+        ] = df.index[confirmed_idx[confirmed_idx != 0]]
+        # if pivot is 0, change pivot_confirmed_at to None
 
         res = df[["pivot", "pivot_confirmed_at"]]
-
-        # if pivot is > 0.5, replace to 1, if < -0.5, replace to -1, else 0
-        res["pivot"] = res["pivot"].apply(lambda x: 1 if x > 0.5 else -1 if x < -0.5 else 0)
 
         return res
 
