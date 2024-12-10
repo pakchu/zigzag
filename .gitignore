@@ -5,3 +5,6 @@
 build/
 dist/
 *.egg-info/
+
+zigzag/core.c
+zigzag/*.so
