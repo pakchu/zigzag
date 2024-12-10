@@ -155,6 +155,9 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
                 else:
                     deviation_rate = (current_pivot_high - last_pivot_price) / last_pivot_price * 100
                     if deviation_rate >= dev_threshold:
+                        pivots[last_pivot] = VALLEY
+                        last_pivot_confirmed = 1
+                        pivot_confirmed_ats[last_pivot] = t
                         last_pivot = current_pivot_target
                         last_pivot_price = current_pivot_high
                         last_pivot_direction = 1
@@ -188,30 +191,14 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
                 else:
                     deviation_rate = (last_pivot_price - current_pivot_low) / last_pivot_price * 100
                     if deviation_rate >= dev_threshold:
+                        pivots[last_pivot] = PEAK
+                        last_pivot_confirmed = 1
+                        pivot_confirmed_ats[last_pivot] = t
                         last_pivot = current_pivot_target
                         last_pivot_price = current_pivot_low
                         last_pivot_direction = -1
                         last_pivot_confirmed = 0
 
-        if last_pivot != -1 and last_pivot_confirmed == 0:
-            if last_pivot_direction == 1:
-                for i in range(last_pivot + 1, t + 1):
-                    edge_confirm_correction = edge_confirm_corrections[i]
-                    correction = last_pivot_price / LOW[i] - 1
-                    if correction >= edge_confirm_correction:
-                        pivots[last_pivot] = PEAK
-                        last_pivot_confirmed = 1
-                        pivot_confirmed_ats[last_pivot] = t
-                        break
-            else:
-                for i in range(last_pivot + 1, t + 1):
-                    edge_confirm_correction = edge_confirm_corrections[i]
-                    correction = HIGH[i] / last_pivot_price - 1
-                    if correction >= edge_confirm_correction:
-                        pivots[last_pivot] = VALLEY
-                        last_pivot_confirmed = 1
-                        pivot_confirmed_ats[last_pivot] = t
-                        break
 
     return pivots, pivot_confirmed_ats
 
