@@ -1,0 +1,5 @@
+include zigzag_cython/*.py
+include zigzag_cython/*.c
+include zigzag_cython/core.pyx
+include zigzag/*.py
+include build.py

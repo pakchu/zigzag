@@ -1,8 +1,12 @@
 import os
 import shutil
 import sys
-from distutils.command.build_ext import build_ext
-from distutils.core import Distribution, Extension
+if not (sys.version_info.major >= 3 and sys.version_info.minor >= 12):
+    from distutils.command.build_ext import build_ext
+    from distutils.core import Distribution, Extension
+else:
+    from setuptools.command.build_ext import build_ext
+    from setuptools import Distribution, Extension
 
 from Cython.Build import cythonize
 import numpy as np
@@ -18,7 +22,7 @@ def build():
     extensions = [
         Extension(
             "*",
-            ["zigzag/*.pyx"],
+            ["zigzag_cython/*.pyx"],
             extra_compile_args=compile_args,
             extra_link_args=link_args,
             include_dirs=include_dirs,
