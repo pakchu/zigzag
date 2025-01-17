@@ -25,23 +25,29 @@ def _to_ndarray(X):
 def peak_valley_pivots(
     HIGH,
     LOW,
+    cHIGH,
+    cLOW,
     min_dev,
     depth,
     allowed_zigzag_on_one_bar
 ):
     HIGH = _to_ndarray(HIGH)
     LOW = _to_ndarray(LOW)
+    cHIGH = _to_ndarray(cHIGH)
+    cLOW = _to_ndarray(cLOW)
 
     # Ensure float for correct signature
     if not str(HIGH.dtype).startswith('float'):
         HIGH = HIGH.astype(np.float64)
-    
+
     if not str(LOW.dtype).startswith('float'):
         LOW = LOW.astype(np.float64)
 
     res, confirmed_idx = peak_valley_pivots_detailed(
         HIGH,
         LOW,
+        cHIGH,
+        cLOW,
         min_dev,
         depth,
         allowed_zigzag_on_one_bar
@@ -71,7 +77,7 @@ def atr_peak_valley_pivots(
     # Ensure float for correct signature
     if not str(HIGH.dtype).startswith('float'):
         HIGH = HIGH.astype(np.float64)
-    
+
     if not str(LOW.dtype).startswith('float'):
         LOW = LOW.astype(np.float64)
 
@@ -102,6 +108,8 @@ def atr_peak_valley_pivots(
 @cython.wraparound(False)
 cpdef peak_valley_pivots_detailed(double [:] HIGH,
                                   double [:] LOW,
+                                  double [:] cHIGH,
+                                  double [:] cLOW,
                                   double min_dev,
                                   int depth,
                                   int allowed_zigzag_on_one_bar):
@@ -109,7 +117,6 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
     cdef:
         int64_t t_n = len(HIGH)
         ndarray[int64_t, ndim=1] pivots = np.zeros(t_n, dtype=np.int64)
-        ndarray[double_t, ndim=1] edge_confirm_corrections = np.zeros(t_n, dtype=np.double)
         ndarray[int64_t, ndim=1] pivot_confirmed_ats = np.zeros(t_n, dtype=np.int64)
         int64_t last_pivot = -1
         int64_t last_pivot_direction
@@ -126,12 +133,11 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
 
     for t in range(depth * 2, t_n):
         dev_threshold = min_dev
-        edge_confirm_correction = min_dev
-        edge_confirm_corrections[t] = min_dev
 
         peak_candidate = 1
         current_pivot_target = t - depth
         current_pivot_high = HIGH[current_pivot_target]
+        current_pivot_chigh = cHIGH[current_pivot_target]
         for i in range(current_pivot_target - depth, current_pivot_target):
             if HIGH[i] >= current_pivot_high:
                 peak_candidate = 0
@@ -153,7 +159,7 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
                         last_pivot_price = current_pivot_high
                         last_pivot_confirmed = 0
                 else:
-                    deviation_rate = (current_pivot_high - last_pivot_price) / last_pivot_price * 100
+                    deviation_rate = (current_pivot_chigh - last_pivot_price) / last_pivot_price * 100
                     if deviation_rate >= dev_threshold:
                         pivots[last_pivot] = VALLEY
                         last_pivot_confirmed = 1
@@ -166,6 +172,7 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
         valley_candidate = 1
         current_pivot_target = t - depth
         current_pivot_low = LOW[current_pivot_target]
+        current_pivot_clow = cLOW[current_pivot_target]
         for i in range(current_pivot_target - depth, current_pivot_target):
             if LOW[i] <= current_pivot_low:
                 valley_candidate = 0
@@ -189,7 +196,7 @@ cpdef peak_valley_pivots_detailed(double [:] HIGH,
                         last_pivot_price = current_pivot_low
                         last_pivot_confirmed = 0
                 else:
-                    deviation_rate = (last_pivot_price - current_pivot_low) / last_pivot_price * 100
+                    deviation_rate = (last_pivot_price - current_pivot_clow) / last_pivot_price * 100
                     if deviation_rate >= dev_threshold:
                         pivots[last_pivot] = PEAK
                         last_pivot_confirmed = 1
