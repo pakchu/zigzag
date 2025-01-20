@@ -37,6 +37,8 @@ class ZigZag:
         high: Union[pd.Series, None] = None,
         low: Union[pd.Series, None] = None,
         close: Union[pd.Series, None] = None,
+        confirm_high: Union[pd.Series, None] = None,
+        confirm_low: Union[pd.Series, None] = None,
         candles: Union[pd.DataFrame, None] = None,
         min_dev_percent: float = 5,
         depth: int = 10,
@@ -67,19 +69,28 @@ class ZigZag:
                     "candles must have columns ['high', 'low', 'close']"
                 ) from e
         else:
-            df = pd.DataFrame({"high": high, "low": low, "close": close})
+            df = pd.DataFrame({"high": high, "low": low, "close": close}).astype(float)
             # if high or low are not provided, generate from close
             df.high = df.max(axis=1)
             df.low = df.min(axis=1)
 
         df.dropna(inplace=True)
-
         high = df["high"].to_numpy()
         low = df["low"].to_numpy()
+        
+        if confirm_high is None:
+            confirm_high = df["high"]
+        if confirm_low is None:
+            confirm_low = df["low"]
+        
+        confirm_high = confirm_high.to_numpy()
+        confirm_low = confirm_low.to_numpy()
 
         pivot, confirmed_idx = zigzag_cython.peak_valley_pivots(
             high,
             low,
+            confirm_high,
+            confirm_low,
             min_dev_percent,
             depth,
             allowed_zigzag_on_one_bar=self.ALLOW_ZIGZAG_ON_ONE_BAR,
