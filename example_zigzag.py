@@ -171,7 +171,7 @@ def test_peak_valley_pivots_pandas_compat():
 
 
 if __name__ == '__main__':
-    df = pd.read_csv('comp.csv')
+    df = pd.read_csv('BTCUSD.csv')
 
     high = df["high"].to_numpy()
     low = df["low"].to_numpy()

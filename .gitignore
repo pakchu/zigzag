@@ -8,3 +8,5 @@ dist/
 
 **/core.c
 **/*.so
+*.code-workspace
+*.vscode/
