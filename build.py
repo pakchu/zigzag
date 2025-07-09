@@ -2,6 +2,12 @@ import os
 import shutil
 import sys
 
+
+if sys.version_info >= (3, 12):
+    # install setuptoos with pip install setuptools>=65.5.0
+    import subprocess
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools>=65.5.0"])   
+
 from distutils.command.build_ext import build_ext
 from distutils.core import Distribution, Extension
 
@@ -27,7 +33,8 @@ def build():
             define_macros=[('CYTHON_TRACE', debug_mode_on),
                            ('CYTHON_TRACE_NOGIL', debug_mode_on),
                            ('CYTHON_BINDING', debug_mode_on),
-                           ('CYTHON_FAST_PYCCALL', '1')],
+                           ('CYTHON_FAST_PYCCALL', '1'),
+                           ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
         )
     ]
     ext_modules = cythonize(

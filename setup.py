@@ -1,20 +1,20 @@
 from setuptools import Extension, setup, find_packages
-from setuptools.command.build_ext import build_ext
 from Cython.Build import cythonize
+# from setuptools.command.build_ext import build_ext
 import numpy as np
-import subprocess
+# import subprocess
 
 
-class CustomBuildCommand(build_ext):
-    def run(self):
-        subprocess.check_call(["python", "build.py"])
-        super().run()
+# class CustomBuildCommand(build_ext):
+#     def run(self):
+#         subprocess.check_call(["python", "build.py"])
+#         super().run()
 
 
 setup(
     include_package_data=True,
     name="slow_zigzag",
-    version="0.3.9",
+    version="0.3.11",
     description="Zig Zag indicator",
     url="https://github.com/pakchu/zigzag",
     author=["hjkim17", "pakchu"],

@@ -9,7 +9,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "slow-zigzag"
-version = "0.3.9"
+version = "0.3.11"
 description = "Zig Zag indicator"
 authors = ["hjkim17 <ouiqdmw17@gmail.com>", "pakchu <gus4734@gmail.com>"]
 readme = "README.md"
@@ -28,7 +28,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.9,<3.12"
 cython = "^3.0.11"
 numpy = ">=1.2.0, < 3.0.0"
 pandas = ">=1.5.0, < 3.0.0"
