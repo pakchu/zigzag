@@ -23,7 +23,7 @@ def true_range(high: pd.Series, low: pd.Series, close: pd.Series):
     tr.iloc[0] = np.nan
     return tr
 
-def average_true_range(high: pd.Series, low: pd.Series, close: pd.Series, length):
+def average_true_range(high: pd.Series, low: pd.Series, close: pd.Series, length: int):
     _tr = true_range(high, low, close)
     return rma(_tr, length)
 
@@ -124,7 +124,7 @@ class ZigZag:
             min_dev:float = 5,
             max_dev:float = 15,
             depth:int = 10,
-            min_abs_correction_size:float = 0,
+            min_abs_edge_correction:float = 0,
             rel_edge_correction:float = 0,
         ) -> pd.DataFrame:
         """_summary_
@@ -139,8 +139,8 @@ class ZigZag:
             min_dev float: The minimum price change to define a peak or a valley. Defaults to 5.
             max_dev float: The maximum price change to define a peak or a valley. Defaults to 15.
             depth int: The depth of the zigzag. Defaults to 14.
-            min_abs_correction_size (float, optional): Defaults to 0.
-            rel_edge_correction (float, optional): Defaults to 0.
+            min_abs_edge_correction (float, optional): Defaults to 0. minimum % of correction size.
+            rel_edge_correction (float, optional): Defaults to 0. ratio of relative edge correction.
 
         Returns:
             pd.DataFrame: A pandas DataFrame with columns ['pivot_kind', 'pivot_confirmed_at'].
@@ -165,7 +165,7 @@ class ZigZag:
             df.low = df.min(axis=1)
 
         df["avg_vol"] = average_true_range(
-            high=df["high"], low=df["low"], close=df["close"], length=atr_len, append=True
+            high=df["high"], low=df["low"], close=df["close"], length=atr_len
         )
 
         df.dropna(inplace=True)
@@ -175,7 +175,7 @@ class ZigZag:
         close = df["close"].to_numpy()
         atr = df["avg_vol"].to_numpy()
 
-        pivot, confirmed_idx = zigzag_cython.atr_peak_valley_pivots(
+        pivot, confirmed_idx = zigzag_cython.peak_valley_pivots_detailed(
             high,
             low,
             close,
@@ -184,7 +184,7 @@ class ZigZag:
             min_dev,
             max_dev,
             rel_edge_correction,
-            min_abs_correction_size,
+            min_abs_edge_correction/100,
             depth,
             allowed_zigzag_on_one_bar=self.ALLOW_ZIGZAG_ON_ONE_BAR,
         )

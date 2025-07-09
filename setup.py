@@ -14,7 +14,7 @@ class CustomBuildCommand(build_ext):
 setup(
     include_package_data=True,
     name="slow_zigzag",
-    version="0.3.8",
+    version="0.3.9",
     description="Zig Zag indicator",
     url="https://github.com/pakchu/zigzag",
     author=["hjkim17", "pakchu"],
