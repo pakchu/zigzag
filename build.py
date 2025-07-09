@@ -3,13 +3,19 @@ import shutil
 import sys
 
 
+# Python 3.12 removed distutils, use setuptools instead
 if sys.version_info >= (3, 12):
-    # install setuptoos with pip install setuptools>=65.5.0
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools>=65.5.0"])   
-
-from distutils.command.build_ext import build_ext
-from distutils.core import Distribution, Extension
+    try:
+        from setuptools.command.build_ext import build_ext
+        from setuptools import Distribution, Extension
+    except ImportError:
+        # Fall back to alternatives if setuptools is not available
+        print("ERROR: setuptools is required for Python 3.12+. Please install it first.")
+        sys.exit(1)
+else:
+    # For earlier Python versions, use distutils
+    from distutils.command.build_ext import build_ext
+    from distutils.core import Distribution, Extension
 
 from Cython.Build import cythonize
 import numpy as np
@@ -44,7 +50,7 @@ def build():
     )
 
     distribution = Distribution({"name": "extended", "ext_modules": ext_modules})
-    distribution.package_dir = "extended"
+    distribution.package_dir = {"": "extended"}  # This needs to be a dictionary
 
     cmd = build_ext(distribution)
     cmd.ensure_finalized()

@@ -175,7 +175,7 @@ class ZigZag:
         close = df["close"].to_numpy()
         atr = df["avg_vol"].to_numpy()
 
-        pivot, confirmed_idx = zigzag_cython.peak_valley_pivots_detailed(
+        pivot, confirmed_idx = zigzag_cython.atr_peak_valley_pivots(
             high,
             low,
             close,
